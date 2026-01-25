@@ -30,7 +30,6 @@ class LlamaGuardChecker:
             Dict with 'text', 'safety_label', and 'categories' (if unsafe)
         """
         if role == "assistant":
-            # For assistant responses, we need the full conversation
             if user_prompt is None:
                 raise ValueError("user_prompt is required when checking assistant responses")
             messages = [
@@ -44,7 +43,6 @@ class LlamaGuardChecker:
                 }
             ]
         else:
-            # For user prompts, just check the prompt itself
             messages = [
                 {
                     "role": "user",
@@ -121,19 +119,15 @@ def process_json_file(input_file: str, output_file: str,
         check_questions: Whether to check question safety (default: True)
         check_answers: Whether to check answer safety (default: True)
     """
-    # Load JSON data
     print(f"Loading data from {input_file}")
     with open(input_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
-    # Handle both list of dicts and single dict
     if isinstance(data, dict):
         data = [data]
     
-    # Initialize checker
     checker = LlamaGuardChecker()
     
-    # Process each item
     results = []
     print(f"Processing {len(data)} items...")
     
@@ -152,20 +146,17 @@ def process_json_file(input_file: str, output_file: str,
         
         if check_answers and answer:
             result["answer_safety"] = checker.check_safety(answer, role="assistant", user_prompt=question)
-        
-        # Determine overall safety
+
         q_safe = not check_questions or result.get("question_safety", {}).get("safety_label") == "safe"
         a_safe = not check_answers or result.get("answer_safety", {}).get("safety_label") == "safe"
         result["overall_safe"] = q_safe and a_safe
         
         results.append(result)
     
-    # Save results
     print(f"Saving results to {output_file}")
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
     
-    # Print summary
     total = len(results)
     unsafe_count = sum(1 for r in results if not r["overall_safe"])
     
